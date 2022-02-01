@@ -1,0 +1,20 @@
+{
+  "name": "lireddit",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "lireddit-server",
+    "lireddit-web"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/louis61619/lireddit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/louis61619/lireddit/issues"
+  },
+  "homepage": "https://github.com/louis61619/lireddit#readme"
+}

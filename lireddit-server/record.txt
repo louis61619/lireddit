@@ -1,0 +1,1 @@
+can set noLib true in tsconfig.json when check lib type
