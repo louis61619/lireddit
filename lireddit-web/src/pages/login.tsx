@@ -1,7 +1,17 @@
 import React, { useEffect } from 'react'
 import { Form, Formik } from 'formik'
 import { useRouter } from 'next/router'
-import { Box, Button, FormControl, FormErrorMessage, FormLabel, Input } from '@chakra-ui/react'
+import NextLink from 'next/link'
+import {
+  Box,
+  Button,
+  Flex,
+  FormControl,
+  FormErrorMessage,
+  FormLabel,
+  Input,
+  Link,
+} from '@chakra-ui/react'
 import { Wrapper } from '../components/Wrapper'
 import { InputField } from '../components/InputField'
 import { useLoginMutation, useLogoutMutation } from '../generated/graphql'
@@ -18,7 +28,7 @@ const Login: React.FC<loginProps> = () => {
   return (
     <Wrapper variant="small">
       <Formik
-        initialValues={{ username: '', password: '' }}
+        initialValues={{ usernameOrEmail: '', password: '' }}
         onSubmit={async (values, { setErrors }) => {
           const response = await login(values)
           if (response.data?.login.errors) {
@@ -31,7 +41,11 @@ const Login: React.FC<loginProps> = () => {
         {({ isSubmitting }) => (
           <Form>
             <Box minHeight="110px">
-              <InputField name="username" placeholder="username" label="Username" />
+              <InputField
+                name="usernameOrEmail"
+                placeholder="username or email"
+                label="Username or Email"
+              />
             </Box>
             <Box minHeight="110px">
               <InputField
@@ -42,6 +56,11 @@ const Login: React.FC<loginProps> = () => {
                 type="password"
               />
             </Box>
+            <Flex>
+              <NextLink href="/forgot-password">
+                <Link ml="auto">forgot password?</Link>
+              </NextLink>
+            </Flex>
             <Button type="submit" colorScheme="teal" isLoading={isSubmitting}>
               login
             </Button>
