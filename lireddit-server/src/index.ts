@@ -8,6 +8,7 @@ import cors from 'cors'
 import { ApolloServer } from 'apollo-server-express'
 import { buildSchema } from 'type-graphql'
 import { MikroORM } from '@mikro-orm/core'
+import { createConnection } from 'typeorm'
 
 import microConfig from './mikro-orm.config'
 import { HelloResolver } from './resolvers/hello'
@@ -16,7 +17,18 @@ import { UserResolver } from './resolvers/user'
 import { COOKIE_NAME, __prod__ } from './constants'
 
 const main = async () => {
+  // use typeorm
+  const conn = await createConnection({
+    type: 'postgres',
+    database: 'lireddit2',
+    username: 'postgres',
+    password: '123456',
+    logging: true,
+    synchronize: true,
+  })
+
   const orm = await MikroORM.init(microConfig)
+  // await orm.em.nativeDelete(User, {})
 
   // 初始化 schema
   // const generator = orm.getSchemaGenerator()
@@ -72,7 +84,7 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: ({ req, res }) => ({ em: orm.em, req, res }),
+    context: ({ req, res }) => ({ em: orm.em, req, res, redis }),
   })
   await apolloServer.start()
 
