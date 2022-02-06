@@ -1,4 +1,14 @@
-import { Arg, Ctx, Field, Mutation, ObjectType, Query, Resolver } from 'type-graphql'
+import {
+  Arg,
+  Ctx,
+  Field,
+  FieldResolver,
+  Mutation,
+  ObjectType,
+  Query,
+  Resolver,
+  Root,
+} from 'type-graphql'
 import argon2 from 'argon2'
 import { v4 } from 'uuid'
 import { User } from '../entities/User'
@@ -26,13 +36,22 @@ class UserResponse {
   user?: User
 }
 
-@Resolver()
+@Resolver(User)
 export class UserResolver {
+  @FieldResolver(() => String)
+  email(@Root() user: User, @Ctx() { req }: MyContext) {
+    // this is the current user and its ok to show them own email
+    if (req.session.userId === user.id) {
+      return user.email
+    }
+    return ''
+  }
+
   @Mutation(() => UserResponse)
   async changePassword(
     @Arg('token') token: string,
     @Arg('newPassword') newPassword: string,
-    @Ctx() { redis, em, req }: MyContext,
+    @Ctx() { redis, req }: MyContext,
   ): Promise<UserResponse> {
     if (newPassword.length <= 3) {
       return {
@@ -56,7 +75,9 @@ export class UserResolver {
       }
     }
 
-    const user = await em.findOne(User, { id: parseInt(userId) })
+    const userIdNum = parseInt(userId)
+    const user = await User.findOne(userIdNum)
+
     if (!user) {
       return {
         errors: [
@@ -68,8 +89,12 @@ export class UserResolver {
       }
     }
 
-    user.password = await argon2.hash(newPassword)
-    await em.persistAndFlush(user)
+    User.update(
+      { id: userIdNum },
+      {
+        password: await argon2.hash(newPassword),
+      },
+    )
 
     await redis.del(FORGET_PASSWORD_PREFIX + token)
 
@@ -82,8 +107,9 @@ export class UserResolver {
   }
 
   @Mutation(() => Boolean)
-  async forgotPassword(@Arg('email') email: string, @Ctx() { em, redis }: MyContext) {
-    const user = await em.findOne(User, { email })
+  async forgotPassword(@Arg('email') email: string, @Ctx() { redis }: MyContext) {
+    // not primary key need use where
+    const user = await User.findOne({ where: email })
     if (!user) {
       return true
     }
@@ -98,30 +124,30 @@ export class UserResolver {
   }
 
   @Query(() => User, { nullable: true })
-  async me(@Ctx() { em, req }: MyContext) {
+  me(@Ctx() { req }: MyContext) {
     if (!req.session.userId) {
       return null
     }
-    const user = await em.findOne(User, { id: req.session.userId })
-    return user
+    // primary key can do in
+    return User.findOne(req.session.userId)
   }
 
   @Mutation(() => UserResponse)
   async register(
     @Arg('options') options: UsernamePasswordInput,
-    @Ctx() { em, req }: MyContext,
+    @Ctx() { req }: MyContext,
   ): Promise<UserResponse> {
     const errors = validateRegister(options)
     if (errors) return { errors }
 
     const hashedPassword = await argon2.hash(options.password)
-    const user = em.create(User, {
-      username: options.username,
-      password: hashedPassword,
-      email: options.email,
-    })
+    let user
     try {
-      await em.persistAndFlush(user)
+      user = await User.create({
+        username: options.username,
+        email: options.email,
+        password: hashedPassword,
+      }).save()
     } catch (error) {
       if (error.code === '23505' || error.detail.includes('already exists')) {
         // duplicate username error
@@ -139,7 +165,7 @@ export class UserResolver {
     // store user id session
     // this will set a cookie on the user
     // keep them logged in
-    req.session.userId = user.id
+    req.session.userId = user?.id
 
     return {
       user,
@@ -150,14 +176,13 @@ export class UserResolver {
   async login(
     @Arg('usernameOrEmail') usernameOrEmail: string,
     @Arg('password') password: string,
-    @Ctx() { em, req }: MyContext,
+    @Ctx() { req }: MyContext,
   ): Promise<UserResponse> {
-    const user = await em.findOne(
-      User,
+    const user = await User.findOne(
       usernameOrEmail.includes('@')
-        ? { email: usernameOrEmail }
+        ? { where: { email: usernameOrEmail } }
         : {
-            username: usernameOrEmail,
+            where: { username: usernameOrEmail },
           },
     )
     if (!user) {
@@ -193,7 +218,6 @@ export class UserResolver {
     return new Promise((resolve) =>
       req.session.destroy((err) => {
         res.clearCookie(COOKIE_NAME)
-        console.log(req.headers.cookie)
         if (err) {
           resolve(false)
           return

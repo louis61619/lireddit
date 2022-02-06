@@ -1,20 +1,20 @@
-import 'reflect-metadata'
-import express from 'express'
-import Redis from 'ioredis'
-import session from 'express-session'
+import { ApolloServer } from 'apollo-server-express'
 import connectRedis from 'connect-redis'
 import cors from 'cors'
-
-import { ApolloServer } from 'apollo-server-express'
+import express from 'express'
+import session from 'express-session'
+import Redis from 'ioredis'
+import path from 'path/posix'
+import 'reflect-metadata'
 import { buildSchema } from 'type-graphql'
-import { MikroORM } from '@mikro-orm/core'
 import { createConnection } from 'typeorm'
-
-import microConfig from './mikro-orm.config'
+import { COOKIE_NAME, __prod__ } from './constants'
+import { Post } from './entities/Post'
+import { Updoot } from './entities/Updoot'
+import { User } from './entities/User'
 import { HelloResolver } from './resolvers/hello'
 import { PostResolver } from './resolvers/post'
 import { UserResolver } from './resolvers/user'
-import { COOKIE_NAME, __prod__ } from './constants'
 
 const main = async () => {
   // use typeorm
@@ -25,9 +25,13 @@ const main = async () => {
     password: '123456',
     logging: true,
     synchronize: true,
+    migrations: [path.resolve(__dirname, './migrations/*')],
+    entities: [Post, User, Updoot],
   })
 
-  const orm = await MikroORM.init(microConfig)
+  await conn.runMigrations()
+
+  // const orm = await MikroORM.init(microConfig)
   // await orm.em.nativeDelete(User, {})
 
   // 初始化 schema
@@ -84,7 +88,7 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: ({ req, res }) => ({ em: orm.em, req, res, redis }),
+    context: ({ req, res }) => ({ req, res, redis }),
   })
   await apolloServer.start()
 
