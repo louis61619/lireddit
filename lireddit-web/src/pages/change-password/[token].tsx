@@ -13,7 +13,7 @@ interface ChangePasswordProps {
   token: string
 }
 
-const ChangePassword: NextPage<ChangePasswordProps> = ({ token }) => {
+const ChangePassword: NextPage<ChangePasswordProps> = () => {
   const [, changePassword] = useChangePasswordMutation()
   const router = useRouter()
   return (
@@ -21,8 +21,10 @@ const ChangePassword: NextPage<ChangePasswordProps> = ({ token }) => {
       <Formik
         initialValues={{ newPassword: '' }}
         onSubmit={async (values, { setErrors }) => {
-          const response = await changePassword({ token, newPassword: values.newPassword })
-          console.log(response)
+          const response = await changePassword({
+            token: typeof router.query.token === 'string' ? router.query.token : '',
+            newPassword: values.newPassword,
+          })
           if (response.data?.changePassword.errors) {
             setErrors(toErrorMap(response.data.changePassword.errors))
           } else if (response.data?.changePassword.user) {
@@ -38,6 +40,7 @@ const ChangePassword: NextPage<ChangePasswordProps> = ({ token }) => {
                 placeholder="new password"
                 label="New password"
                 type="password"
+                autoComplete="off"
               />
             </Box>
             <Button type="submit" colorScheme="teal" isLoading={isSubmitting}>
@@ -50,10 +53,10 @@ const ChangePassword: NextPage<ChangePasswordProps> = ({ token }) => {
   )
 }
 
-ChangePassword.getInitialProps = ({ query }) => {
-  return {
-    token: query.token as string,
-  }
-}
+// ChangePassword.getInitialProps = ({ query }) => {
+//   return {
+//     token: query.token as string,
+//   }
+// }
 
 export default withUrqlClient(createUrqlClient)(ChangePassword)

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.5.8",
+    "@chakra-ui/icons": "^1.1.5",
     "@chakra-ui/react": "^1.8.1",
     "@emotion/react": "^11",
     "@emotion/styled": "^11",
@@ -19,13 +20,15 @@
     "formik": "^2.2.9",
     "framer-motion": "^5",
     "graphql": "15.3.0",
+    "graphql-type": "^1.1.1",
     "isomorphic-unfetch": "^3.1.0",
     "next": "12.0.9",
     "next-urql": "^3.3.2",
     "react": "17.0.2",
     "react-dom": "17.0.2",
     "react-is": "^17.0.2",
-    "urql": "^2.1.2"
+    "urql": "^2.1.2",
+    "wonka": "^4.0.15"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "2.4.0",
