@@ -1,13 +1,21 @@
 import React from 'react'
 import { Box, Button, Flex, Heading, Link } from '@chakra-ui/react'
 import NextLink from 'next/link'
+import { useApolloClient } from '@apollo/client'
 import { useLogoutMutation, useMeQuery } from '../generated/graphql'
+import { isServer } from '../utils/isServer'
 
 interface NavbarProps {}
 
 export const Navbar: React.FC<NavbarProps> = () => {
-  const [{ fetching: logoutFetching }, logout] = useLogoutMutation()
-  const [{ data, fetching }] = useMeQuery()
+  const [logout, { loading: logoutFetching }] = useLogoutMutation()
+  const apolloClient = useApolloClient()
+  const { data, loading } = useMeQuery({
+    // 判斷是否為 ssr
+    // 這樣使用會導致網頁報錯
+    // skip: isServer(),
+  })
+
   let body = null
   if (!data?.me?.username) {
     body = (
@@ -29,7 +37,14 @@ export const Navbar: React.FC<NavbarProps> = () => {
           </NextLink>
         </Flex>
         <Box mr={4}>{data?.me?.username}</Box>
-        <Button variant="link" onClick={() => logout()} isLoading={logoutFetching}>
+        <Button
+          variant="link"
+          onClick={async () => {
+            await logout()
+            await apolloClient.resetStore()
+          }}
+          isLoading={logoutFetching}
+        >
           logout
         </Button>
       </Flex>
@@ -43,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
             <Heading>LiReddit</Heading>
           </Link>
         </NextLink>
-        <Box ml="auto">{!fetching && body}</Box>
+        <Box ml="auto">{!loading && body}</Box>
       </Flex>
     </Flex>
   )

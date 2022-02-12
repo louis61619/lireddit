@@ -1,4 +1,4 @@
-import { cacheExchange, Resolver } from '@urql/exchange-graphcache'
+import { cacheExchange, Resolver, Cache } from '@urql/exchange-graphcache'
 import Router from 'next/router'
 import { dedupExchange, Exchange, fetchExchange, gql, stringifyVariables } from 'urql'
 import { pipe, tap } from 'wonka'
@@ -59,6 +59,7 @@ export const cursorPagination = (): Resolver => {
       // console.log(entityKey, fi.fieldKey)
       const key = cache.resolveFieldByKey(entityKey, fi.fieldKey) as string
       const data = cache.resolve(key, 'posts') as string[]
+      // console.log(data)
       const _hasMore = cache.resolve(key, 'hasMore')
       if (!_hasMore) {
         hasMore = _hasMore as boolean
@@ -74,11 +75,19 @@ export const cursorPagination = (): Resolver => {
   }
 }
 
+function invalidateAllPost(cache: Cache) {
+  const allFields = cache.inspectFields('Query')
+  const fieldInfos = allFields.filter((info) => info.fieldName === 'posts')
+  fieldInfos.forEach((fi) => {
+    cache.invalidate('Query', 'posts', fi.arguments || {})
+  })
+}
+
 export const createUrqlClient = (ssrExchange: any, ctx: any) => {
   // 先不做 ssr
   // console.log(ssrExchange, ctx)
   return {
-    url: 'http://localhost:4000/graphql',
+    url: process.env.NEXT_PUBLIC_API_URL,
     fetchOptions: {
       credentials: 'include' as const,
     },
@@ -130,11 +139,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
               }
             },
             createPost: (_result, args, cache) => {
-              const allFields = cache.inspectFields('Query')
-              const fieldInfos = allFields.filter((info) => info.fieldName === 'posts')
-              fieldInfos.forEach((fi) => {
-                cache.invalidate('Query', 'posts', fi.arguments || {})
-              })
+              invalidateAllPost(cache)
             },
             logout: (_result, args, cache) => {
               betterUpdateQuery<LoginMutation, MeQuery>(
@@ -143,6 +148,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
                 _result,
                 () => ({ me: null }),
               )
+              invalidateAllPost(cache)
             },
             login: (_result, args, cache) => {
               betterUpdateQuery<LoginMutation, MeQuery>(
@@ -159,6 +165,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
                   }
                 },
               )
+              invalidateAllPost(cache)
             },
             register: (_result, args, cache) => {
               betterUpdateQuery<RegisterMutation, MeQuery>(

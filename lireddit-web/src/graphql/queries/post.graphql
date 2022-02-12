@@ -3,13 +3,13 @@ query Post($postId: Int!) {
     id
     title
     text
+    points
+    voteStatus
+    creatorId
     creator {
       id
       username
       email
     }
-    points
-    voteStatus
-    creatorId
   }
 }

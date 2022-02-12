@@ -1,13 +1,5 @@
 // import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
-import { Field, ObjectType } from 'type-graphql'
-import {
-  BaseEntity,
-  Column,
-  Entity,
-  ManyToOne,
-  PrimaryColumn,
-  PrimaryGeneratedColumn,
-} from 'typeorm'
+import { BaseEntity, Column, Entity, ManyToOne, PrimaryColumn } from 'typeorm'
 import { Post } from './Post'
 import { User } from './User'
 

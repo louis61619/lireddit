@@ -2,22 +2,18 @@ import { Box, Heading } from '@chakra-ui/react'
 import { withUrqlClient } from 'next-urql'
 import { useRouter } from 'next/router'
 import React from 'react'
+import { EditDelectPostButton } from '../../components/EditDelectPostButton'
 import { Layout } from '../../components/Layout'
 import { usePostQuery } from '../../generated/graphql'
 import { createUrqlClient } from '../../utils/createUrqlClient'
+import { useGetPostFromUrl } from '../../utils/useGetPostFromUrl'
+import { withApollo } from '../../utils/withApollo'
 
 interface PostProps {}
 
 const Post: React.FC<PostProps> = () => {
-  const router = useRouter()
-  const intId = typeof router.query.id === 'string' ? parseInt(router.query.id) : -1
-  const [{ data, fetching }] = usePostQuery({
-    pause: intId === -1,
-    variables: {
-      postId: intId,
-    },
-  })
-  if (fetching) {
+  const [{ data, loading }] = useGetPostFromUrl()
+  if (loading) {
     return (
       <Layout>
         <div>...loading</div>
@@ -31,12 +27,15 @@ const Post: React.FC<PostProps> = () => {
       </Layout>
     )
   }
+
   return (
     <Layout>
-      <Heading>{data.post.title}</Heading>
-      {data.post.text}
+      <Heading mb={4}>{data.post.title}</Heading>
+
+      <Box mb={4}>{data.post.text}</Box>
+      <EditDelectPostButton post={data.post} />
     </Layout>
   )
 }
 
-export default withUrqlClient(createUrqlClient)(Post)
+export default withApollo({ ssr: true })(Post)

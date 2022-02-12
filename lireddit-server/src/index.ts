@@ -1,11 +1,14 @@
+import 'reflect-metadata'
+import 'dotenv-safe/config'
+
 import { ApolloServer } from 'apollo-server-express'
 import connectRedis from 'connect-redis'
 import cors from 'cors'
 import express from 'express'
 import session from 'express-session'
 import Redis from 'ioredis'
-import path from 'path/posix'
-import 'reflect-metadata'
+import path from 'path'
+
 import { buildSchema } from 'type-graphql'
 import { createConnection } from 'typeorm'
 import { COOKIE_NAME, __prod__ } from './constants'
@@ -15,21 +18,22 @@ import { User } from './entities/User'
 import { HelloResolver } from './resolvers/hello'
 import { PostResolver } from './resolvers/post'
 import { UserResolver } from './resolvers/user'
+import { createUpdootLoader } from './utils/createUpdootLoader'
+import { createUserLoader } from './utils/createUserLoader'
 
 const main = async () => {
   // use typeorm
-  const conn = await createConnection({
+  await createConnection({
     type: 'postgres',
-    database: 'lireddit2',
-    username: 'postgres',
-    password: '123456',
+    url: process.env.DATABASE_URL,
     logging: true,
-    synchronize: true,
+    // 創建模擬資料，開發用
+    // synchronize: true,
     migrations: [path.resolve(__dirname, './migrations/*')],
     entities: [Post, User, Updoot],
   })
-
-  await conn.runMigrations()
+  // 調用遷移資料
+  // await conn.runMigrations()
 
   // const orm = await MikroORM.init(microConfig)
   // await orm.em.nativeDelete(User, {})
@@ -48,16 +52,12 @@ const main = async () => {
   app.use(
     cors({
       credentials: true,
-      origin: [
-        'https://studio.apollographql.com',
-        'http://localhost:4000/graphql',
-        'http://localhost:3000',
-      ],
+      origin: ['https://studio.apollographql.com', process.env.CORS_ORIGIN],
     }),
   )
 
   const RedisStore = connectRedis(session)
-  const redis = new Redis()
+  const redis = new Redis(process.env.REDIS_URL)
 
   app.use(
     session({
@@ -71,13 +71,13 @@ const main = async () => {
         httpOnly: true,
         // sameSite: 'lax', // csrf
         // sameSite: 'none', // use in graphql studio
-
         // secure: __prod__, // cookie only work in https
         sameSite: 'lax',
         secure: __prod__ ? true : 'auto',
+        // domain: // only use in this domain
       },
       saveUninitialized: false,
-      secret: 'fqwwwwjrirofffll',
+      secret: process.env.SESSION_SECRET,
       resave: false,
     }),
   )
@@ -88,7 +88,13 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: ({ req, res }) => ({ req, res, redis }),
+    context: ({ req, res }) => ({
+      req,
+      res,
+      redis,
+      userLoader: createUserLoader(),
+      updootLoader: createUpdootLoader(),
+    }),
   })
   await apolloServer.start()
 
@@ -97,8 +103,8 @@ const main = async () => {
     cors: false,
   })
 
-  app.listen(4000, () => {
-    console.log('server is listen on 4000')
+  app.listen(process.env.PORT, () => {
+    console.log(`server is listen on ${process.env.PORT}`)
   })
 }
 

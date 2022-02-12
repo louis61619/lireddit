@@ -1,12 +1,10 @@
 import { Box, Button } from '@chakra-ui/react'
-import { Formik, Form } from 'formik'
+import { Form, Formik } from 'formik'
 import { NextPage } from 'next'
-import { withUrqlClient } from 'next-urql'
 import { useRouter } from 'next/router'
 import { InputField } from '../../components/InputField'
 import { Wrapper } from '../../components/Wrapper'
-import { useChangePasswordMutation } from '../../generated/graphql'
-import { createUrqlClient } from '../../utils/createUrqlClient'
+import { MeDocument, MeQuery, useChangePasswordMutation } from '../../generated/graphql'
 import { toErrorMap } from '../../utils/toErrorMap'
 
 interface ChangePasswordProps {
@@ -14,7 +12,7 @@ interface ChangePasswordProps {
 }
 
 const ChangePassword: NextPage<ChangePasswordProps> = () => {
-  const [, changePassword] = useChangePasswordMutation()
+  const [changePassword] = useChangePasswordMutation()
   const router = useRouter()
   return (
     <Wrapper variant="small">
@@ -22,8 +20,20 @@ const ChangePassword: NextPage<ChangePasswordProps> = () => {
         initialValues={{ newPassword: '' }}
         onSubmit={async (values, { setErrors }) => {
           const response = await changePassword({
-            token: typeof router.query.token === 'string' ? router.query.token : '',
-            newPassword: values.newPassword,
+            variables: {
+              token: typeof router.query.token === 'string' ? router.query.token : '',
+              newPassword: values.newPassword,
+            },
+            update: (cache, { data }) => {
+              cache.writeQuery<MeQuery>({
+                query: MeDocument,
+                data: {
+                  __typename: 'Query',
+                  me: data?.changePassword.user,
+                },
+              })
+              cache.evict({ fieldName: 'posts:{}' })
+            },
           })
           if (response.data?.changePassword.errors) {
             setErrors(toErrorMap(response.data.changePassword.errors))
@@ -59,4 +69,4 @@ const ChangePassword: NextPage<ChangePasswordProps> = () => {
 //   }
 // }
 
-export default withUrqlClient(createUrqlClient)(ChangePassword)
+export default ChangePassword
