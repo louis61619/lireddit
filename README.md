@@ -1,8 +1,19 @@
 start server with development
 
 ```
-yarn watch && yarn start
+cd lireddit-server
+yarn watch
+yarn start
 ```
+
+start client
+
+```
+cd lireddit-web
+yarn dev
+```
+
+use
 
 - TypeScript
 - graphql
